@@ -17,14 +17,21 @@ export class SupabaseService {
   getClient(authToken?: string): SupabaseClient {
     // Si se proporciona un token de autenticación, crear un nuevo cliente con la sesión
     if (authToken) {
+      console.log('Creando cliente Supabase con token JWT');
       return createClient(this.supabaseUrl, this.supabaseKey, {
         global: {
           headers: {
             Authorization: `Bearer ${authToken}`,
           },
         },
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
       });
     }
+
+    console.log('Creando cliente Supabase sin autenticación');
     return this.supabase;
   }
 }

@@ -14,14 +14,14 @@ interface DataResponse<T> {
 export class UsersService {
   constructor(private supabaseService: SupabaseService) {}
 
-  // En src/users/users.service.ts
   async updateProfile(
     userId: string,
     updateProfileDto: UpdateProfileDto,
+    authToken?: string,
   ): Promise<User> {
     // Filtramos para eliminar propiedades undefined
     const updateData = Object.entries(updateProfileDto)
-      .filter(([, value]) => value !== undefined) // Cambio de [_] a [,] para evitar error de ESLint
+      .filter(([, value]) => value !== undefined)
       .reduce<Record<string, any>>(
         (acc, [key, value]: [string, unknown]) => ({
           ...acc,
@@ -32,17 +32,18 @@ export class UsersService {
 
     if (Object.keys(updateData).length === 0) {
       // No hay datos para actualizar
-      return this.findOne(userId);
+      return this.findOne(userId, authToken);
     }
 
-    // Actualizamos el perfil
+    // Actualizamos el perfil con el cliente autenticado
+    const supabase = this.supabaseService.getClient(authToken);
+
     interface SupabaseResponse<T> {
       data: T | null;
       error: any;
     }
 
-    const response: SupabaseResponse<User> = await this.supabaseService
-      .getClient()
+    const response: SupabaseResponse<User> = await supabase
       .from('users')
       .update(updateData)
       .eq('id', userId)
@@ -58,9 +59,10 @@ export class UsersService {
     return response.data;
   }
 
-  async findAll(): Promise<User[]> {
-    const { data, error }: DataResponse<User[]> = await this.supabaseService
-      .getClient()
+  async findAll(authToken?: string): Promise<User[]> {
+    const supabase = this.supabaseService.getClient(authToken);
+
+    const { data, error }: DataResponse<User[]> = await supabase
       .from('users')
       .select('*');
 
@@ -68,9 +70,10 @@ export class UsersService {
     return data || [];
   }
 
-  async findOne(id: string): Promise<User> {
-    const { data, error }: DataResponse<User> = await this.supabaseService
-      .getClient()
+  async findOne(id: string, authToken?: string): Promise<User> {
+    const supabase = this.supabaseService.getClient(authToken);
+
+    const { data, error }: DataResponse<User> = await supabase
       .from('users')
       .select('*')
       .eq('id', id)
@@ -82,9 +85,13 @@ export class UsersService {
     return data;
   }
 
-  async searchContacts(searchTerm: string): Promise<User[]> {
-    const { data, error }: DataResponse<User[]> = await this.supabaseService
-      .getClient()
+  async searchContacts(
+    searchTerm: string,
+    authToken?: string,
+  ): Promise<User[]> {
+    const supabase = this.supabaseService.getClient(authToken);
+
+    const { data, error }: DataResponse<User[]> = await supabase
       .from('users')
       .select('*')
       .ilike('full_name', `%${searchTerm}%`)

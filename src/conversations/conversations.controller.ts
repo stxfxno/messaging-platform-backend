@@ -10,18 +10,18 @@ import { ConversationWithParticipants } from './conversations.service';
 export class ConversationsController {
   constructor(private readonly conversationsService: ConversationsService) {}
 
-  // En el controlador de conversaciones
   @Get('between/:userId1/:userId2')
   findOrCreateBetweenUsers(
     @Param('userId1') userId1: string,
     @Param('userId2') userId2: string,
     @Req() request: Request,
   ): Promise<Conversation> {
-    // Esto puede ser el problema - ¿Está llegando el header de Authorization?
-    const authToken = request.headers.authorization?.split(' ')[1];
-
-    // Intenta usar request['supabaseToken'] si lo configuraste en el middleware
-    // const authToken = request['supabaseToken'];
+    // Usar de manera consistente el token extraído por el middleware
+    const authToken = request['supabaseToken'];
+    console.log(
+      'Token en findOrCreateBetweenUsers:',
+      authToken ? 'Presente' : 'Ausente',
+    );
 
     return this.conversationsService.findOrCreateBetweenUsers(
       userId1,
@@ -36,6 +36,8 @@ export class ConversationsController {
     @Req() request: Request,
   ): Promise<ConversationWithParticipants[]> {
     const authToken = request['supabaseToken'];
+    console.log('Token en findAllByUser:', authToken ? 'Presente' : 'Ausente');
+
     return this.conversationsService.findAllByUser(userId, authToken);
   }
 
@@ -45,6 +47,11 @@ export class ConversationsController {
     @Req() request: Request,
   ): Promise<Conversation> {
     const authToken = request['supabaseToken'];
+    console.log(
+      'Token en create conversation:',
+      authToken ? 'Presente' : 'Ausente',
+    );
+
     return this.conversationsService.create(createConversationDto, authToken);
   }
 }

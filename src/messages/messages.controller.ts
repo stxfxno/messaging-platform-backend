@@ -7,7 +7,9 @@ import {
   Post,
   Query,
   Patch,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { MessagesService } from './messages.service';
 import { Message } from './entities/message.entity';
 import { CreateMessageDto } from './dto/create-message.dto';
@@ -16,23 +18,34 @@ import { CreateMessageDto } from './dto/create-message.dto';
 export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
 
-  // src/messages/messages.controller.ts
   @Get('conversation/:id')
   findAllByConversation(
     @Param('id') id: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 20,
+    @Req() request: Request,
   ): Promise<{ messages: Message[]; total: number }> {
-    return this.messagesService.findAllByConversation(id, page, limit);
+    const authToken = request['supabaseToken'];
+    return this.messagesService.findAllByConversation(
+      id,
+      page,
+      limit,
+      authToken,
+    );
   }
 
   @Post()
-  create(@Body() createMessageDto: CreateMessageDto): Promise<Message> {
-    return this.messagesService.create(createMessageDto);
+  create(
+    @Body() createMessageDto: CreateMessageDto,
+    @Req() request: Request,
+  ): Promise<Message> {
+    const authToken = request['supabaseToken'];
+    return this.messagesService.create(createMessageDto, authToken);
   }
 
   @Patch(':id/read')
-  markAsRead(@Param('id') id: string): Promise<void> {
-    return this.messagesService.markAsRead(id);
+  markAsRead(@Param('id') id: string, @Req() request: Request): Promise<void> {
+    const authToken = request['supabaseToken'];
+    return this.messagesService.markAsRead(id, authToken);
   }
 }

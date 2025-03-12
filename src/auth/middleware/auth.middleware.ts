@@ -7,12 +7,17 @@ export class AuthMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
     // Extraer token de Authorization header
     const authHeader = req.headers.authorization;
-    if (authHeader) {
-      console.log('Authorization header found:', authHeader);
-      req['supabaseToken'] = authHeader.split(' ')[1];
-      console.log('Token extracted:', req['supabaseToken']);
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      if (token) {
+        console.log('Token JWT extraído correctamente');
+        // Guardar el token en el objeto request para uso posterior
+        req['supabaseToken'] = token;
+      } else {
+        console.log('Token JWT no encontrado en el header de Authorization');
+      }
     } else {
-      console.log('No authorization header found');
+      console.log('Header de Authorization no encontrado o formato incorrecto');
     }
     next();
   }

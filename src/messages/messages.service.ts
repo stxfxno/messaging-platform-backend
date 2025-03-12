@@ -19,19 +19,21 @@ interface DataResponse<T> {
 export class MessagesService {
   constructor(private supabaseService: SupabaseService) {}
 
-  // src/messages/messages.service.ts
   async findAllByConversation(
     conversationId: string,
     page: number = 1,
     limit: number = 20,
+    authToken?: string,
   ): Promise<{ messages: Message[]; total: number }> {
     // Calcular rango para paginación
     const start = (page - 1) * limit;
     const end = start + limit - 1;
 
+    // Usar el cliente con el token de autenticación
+    const supabase = this.supabaseService.getClient(authToken);
+
     // Obtener conteo total
-    const countResponse = await this.supabaseService
-      .getClient()
+    const countResponse = await supabase
       .from('messages')
       .select('id', { count: 'exact' })
       .eq('conversation_id', conversationId);
@@ -39,8 +41,7 @@ export class MessagesService {
     const total = countResponse.count || 0;
 
     // Obtener mensajes paginados
-    const response = await this.supabaseService
-      .getClient()
+    const response = await supabase
       .from('messages')
       .select('*')
       .eq('conversation_id', conversationId)
@@ -55,9 +56,12 @@ export class MessagesService {
     };
   }
 
-  async create(createMessageDto: CreateMessageDto): Promise<Message> {
+  async create(
+    createMessageDto: CreateMessageDto,
+    authToken?: string,
+  ): Promise<Message> {
     const { data, error }: DataResponse<Message> = await this.supabaseService
-      .getClient()
+      .getClient(authToken)
       .from('messages')
       .insert([createMessageDto])
       .select()
@@ -66,12 +70,19 @@ export class MessagesService {
     if (error) throw error;
     if (!data) throw new Error('Failed to create message');
 
+    // Actualizar también la fecha de la conversación para ordenar por último mensaje
+    await this.supabaseService
+      .getClient(authToken)
+      .from('conversations')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', createMessageDto.conversation_id);
+
     return data;
   }
 
-  async markAsRead(messageId: string): Promise<void> {
+  async markAsRead(messageId: string, authToken?: string): Promise<void> {
     const { error } = await this.supabaseService
-      .getClient()
+      .getClient(authToken)
       .from('messages')
       .update({ is_read: true })
       .eq('id', messageId);
