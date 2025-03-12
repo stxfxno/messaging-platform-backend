@@ -17,11 +17,11 @@ export class ConversationsController {
     @Param('userId2') userId2: string,
     @Req() request: Request,
   ): Promise<Conversation> {
-    console.log('Headers recibidos:', request.headers);
-    console.log('Usuario 1:', userId1);
-    console.log('Usuario 2:', userId2);
+    // Esto puede ser el problema - ¿Está llegando el header de Authorization?
     const authToken = request.headers.authorization?.split(' ')[1];
-    console.log('Token extraído:', authToken);
+
+    // Intenta usar request['supabaseToken'] si lo configuraste en el middleware
+    // const authToken = request['supabaseToken'];
 
     return this.conversationsService.findOrCreateBetweenUsers(
       userId1,

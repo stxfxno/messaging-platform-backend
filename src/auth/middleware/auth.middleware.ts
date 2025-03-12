@@ -8,7 +8,11 @@ export class AuthMiddleware implements NestMiddleware {
     // Extraer token de Authorization header
     const authHeader = req.headers.authorization;
     if (authHeader) {
+      console.log('Authorization header found:', authHeader);
       req['supabaseToken'] = authHeader.split(' ')[1];
+      console.log('Token extracted:', req['supabaseToken']);
+    } else {
+      console.log('No authorization header found');
     }
     next();
   }
