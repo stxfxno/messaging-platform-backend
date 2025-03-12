@@ -2,51 +2,83 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { RegisterDto } from './dto/register.dto';
-import { User } from '../users/entities/user.entity';
-import { randomUUID } from 'crypto';
 import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
   constructor(private supabaseService: SupabaseService) {}
 
-  async login(loginDto: LoginDto): Promise<User> {
-    const { email } = loginDto;
+  async login(loginDto: LoginDto) {
+    const { email, password } = loginDto;
 
-    const response = await this.supabaseService
+    // Usar el método signInWithPassword de Supabase Auth
+    const { data, error } = await this.supabaseService
+      .getClient()
+      .auth.signInWithPassword({
+        email,
+        password,
+      });
+
+    if (error) throw error;
+
+    // Obtener los datos del usuario además de los datos de sesión
+    const userResponse = await this.supabaseService
       .getClient()
       .from('users')
       .select('*')
-      .eq('email', email)
+      .eq('id', data.user.id)
       .single();
 
-    if (response.error) throw response.error;
-    if (!response.data) throw new Error('Usuario no encontrado');
+    if (userResponse.error) throw userResponse.error;
 
-    return response.data as User;
+    // Devolver el usuario y la sesión (importante: contiene el token de acceso)
+    return {
+      user: userResponse.data,
+      session: data.session,
+    };
   }
 
-  async register(registerDto: RegisterDto): Promise<User> {
-    const { email, full_name, phone_number } = registerDto;
+  async register(registerDto: RegisterDto) {
+    const { email, password, full_name, phone_number } = registerDto;
 
-    const userId = randomUUID();
+    // Registrar con Supabase Auth
+    const { data, error } = await this.supabaseService.getClient().auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name,
+          phone_number,
+        },
+      },
+    });
 
-    const response = await this.supabaseService
-      .getClient()
-      .from('users')
-      .insert({
-        id: userId,
-        email,
-        full_name,
-        phone_number,
-        created_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
+    if (error) throw error;
 
-    if (response.error) throw response.error;
-    if (!response.data) throw new Error('Failed to create user');
+    // Crear entrada en la tabla users con el UUID generado por Supabase Auth
+    if (data.user) {
+      const userResponse = await this.supabaseService
+        .getClient()
+        .from('users')
+        .insert({
+          id: data.user.id,
+          email,
+          full_name,
+          phone_number,
+          created_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
 
-    return response.data as User;
+      if (userResponse.error) throw userResponse.error;
+
+      // Devolver el usuario y la sesión
+      return {
+        user: userResponse.data,
+        session: data.session,
+      };
+    }
+
+    throw new Error('No se pudo crear el usuario');
   }
 }

@@ -6,23 +6,25 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 @Injectable()
 export class SupabaseService {
   private supabase: SupabaseClient;
+  private supabaseUrl = 'https://kjierrlfdzwojznniezu.supabase.co';
+  private supabaseKey =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqaWVycmxmZHp3b2p6bm5pZXp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE0NzM2MTksImV4cCI6MjA1NzA0OTYxOX0.aiBZi5C56xRxn-iy0csKO_IUUyrvrFa_Yo4j4CLO7XE';
 
   constructor(private configService: ConfigService) {
-    // Opción 1: Usa directamente las cadenas
-    this.supabase = createClient(
-      'https://kjierrlfdzwojznniezu.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtqaWVycmxmZHp3b2p6bm5pZXp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE0NzM2MTksImV4cCI6MjA1NzA0OTYxOX0.aiBZi5C56xRxn-iy0csKO_IUUyrvrFa_Yo4j4CLO7XE',
-    );
-
-    // Opción 2: Si quieres usar ConfigService correctamente
-    // Primero debes definir estas variables en tu archivo .env
-    // this.supabase = createClient(
-    //   this.configService.get<string>('SUPABASE_URL') || '',
-    //   this.configService.get<string>('SUPABASE_KEY') || ''
-    // );
+    this.supabase = createClient(this.supabaseUrl, this.supabaseKey);
   }
 
-  getClient(): SupabaseClient {
+  getClient(authToken?: string): SupabaseClient {
+    // Si se proporciona un token de autenticación, crear un nuevo cliente con la sesión
+    if (authToken) {
+      return createClient(this.supabaseUrl, this.supabaseKey, {
+        global: {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        },
+      });
+    }
     return this.supabase;
   }
 }

@@ -63,9 +63,10 @@ export class ConversationsService {
   async findOrCreateBetweenUsers(
     userId1: string,
     userId2: string,
+    authToken?: string,
   ): Promise<Conversation> {
     // Buscar si ya existe una conversación entre estos usuarios
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.supabaseService.getClient(authToken);
 
     // Primero obtenemos todas las conversaciones del usuario1
     const userConversationsResponse: SupabaseResponse<
@@ -78,7 +79,7 @@ export class ConversationsService {
     if (userConversationsResponse.error) throw userConversationsResponse.error;
     if (!userConversationsResponse.data?.length) {
       // Si el usuario1 no tiene conversaciones, crear una nueva
-      return this.createConversationBetween(userId1, userId2);
+      return this.createConversationBetween(userId1, userId2, authToken);
     }
 
     // Convertir explícitamente a array tipado
@@ -103,7 +104,7 @@ export class ConversationsService {
       !sharedConversationsResponse.data ||
       sharedConversationsResponse.data.length === 0
     ) {
-      return this.createConversationBetween(userId1, userId2);
+      return this.createConversationBetween(userId1, userId2, authToken);
     }
 
     // Si existe, obtener los detalles de la primera conversación compartida
@@ -127,9 +128,10 @@ export class ConversationsService {
   private async createConversationBetween(
     userId1: string,
     userId2: string,
+    authToken?: string,
   ): Promise<Conversation> {
     // Crear una nueva conversación
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.supabaseService.getClient(authToken);
 
     // 1. Crear la conversación
     const conversationResponse: SupabaseResponse<Conversation> = await supabase
@@ -157,11 +159,16 @@ export class ConversationsService {
     return conversationResponse.data;
   }
 
-  async findAllByUser(userId: string): Promise<ConversationWithParticipants[]> {
+  async findAllByUser(
+    userId: string,
+    authToken?: string,
+  ): Promise<ConversationWithParticipants[]> {
+    // Usar el cliente con el token de autenticación
+    const supabase = this.supabaseService.getClient(authToken);
+
     // Find all conversations where the user is a participant
     const participationsResponse: SupabaseResponse<ParticipationRecord[]> =
-      await this.supabaseService
-        .getClient()
+      await supabase
         .from('conversation_participants')
         .select('conversation_id')
         .eq('user_id', userId);
@@ -175,8 +182,7 @@ export class ConversationsService {
 
     // Get conversations with the latest message and participants info
     const conversationsResponse: SupabaseResponse<ConversationRecord[]> =
-      await this.supabaseService
-        .getClient()
+      await supabase
         .from('conversations')
         .select(
           `
@@ -225,10 +231,11 @@ export class ConversationsService {
 
   async create(
     createConversationDto: CreateConversationDto,
+    authToken?: string,
   ): Promise<Conversation> {
     try {
-      // Start a transaction
-      const supabase = this.supabaseService.getClient();
+      // Usar el cliente con el token de autenticación
+      const supabase = this.supabaseService.getClient(authToken);
 
       console.log('Intentando crear conversación...');
 
